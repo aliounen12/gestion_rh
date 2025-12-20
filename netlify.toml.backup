@@ -1,0 +1,32 @@
+[build]
+  command = "echo 'No build step required'"
+  functions = "netlify/functions"
+  publish = "."
+
+# Alternative : Sans spécification de version Python
+# Netlify utilisera sa version par défaut
+
+# Redirects pour l'API
+[[redirects]]
+  from = "/assistant/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/gestionrh"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/docs"
+  to = "/.netlify/functions/api/docs"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/redoc"
+  to = "/.netlify/functions/api/redoc"
+  status = 200
+  force = false
