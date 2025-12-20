@@ -1,0 +1,15 @@
+{
+  "name": "gestion-rh-api",
+  "version": "1.0.0",
+  "description": "API de gestion des ressources humaines avec assistant IA",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
+  "keywords": [
+    "fastapi",
+    "netlify",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT"
+}

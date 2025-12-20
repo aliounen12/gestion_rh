@@ -1,0 +1,14 @@
+[build]
+  command = "echo 'No build step required'"
+  functions = "netlify/functions"
+  publish = "."
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
+
+# Redirects pour l'API - Toutes les requêtes passent par la fonction api
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = false
