@@ -3,8 +3,8 @@
   functions = "netlify/functions"
   publish = "."
 
-[build.environment]
-  PYTHON_VERSION = "3.12"
+# Ne pas spécifier de version Python - Netlify utilisera sa version par défaut
+# Cela évite les problèmes avec mise et python-build
 
 # Redirects pour l'API
 # Toutes les requêtes sont redirigées vers la fonction Netlify avec le chemin complet

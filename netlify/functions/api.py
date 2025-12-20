@@ -1,36 +1,47 @@
 """
 Netlify Function handler pour l'API FastAPI
+Optimisé pour Netlify Functions
 """
 
 import sys
 import os
 import json
 
-# Ajouter le répertoire racine au path Python
-# Dans Netlify, le répertoire de travail est différent
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.abspath(os.path.join(current_dir, '../../'))
+# Configuration du path Python pour Netlify
+# Dans Netlify Functions, le répertoire de travail est différent
+current_file = os.path.abspath(__file__)
+functions_dir = os.path.dirname(current_file)
+netlify_dir = os.path.dirname(functions_dir)
+root_dir = os.path.dirname(netlify_dir)
+
+# Ajouter le répertoire racine au path
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-# S'assurer que le répertoire de travail est correct
+# Essayer de changer le répertoire de travail (optionnel)
 try:
     os.chdir(root_dir)
 except:
-    pass  # Si on ne peut pas changer, continuer quand même
+    pass
+
+# Import de l'application FastAPI avec gestion d'erreurs
+mangum_handler = None
+app = None
+import_error = None
 
 try:
     from mangum import Mangum
     from app.main import app
     
-    # Créer le handler Mangum pour Netlify
-    # lifespan="off" car Netlify Functions ne supporte pas les événements de lifespan
-    mangum_handler = Mangum(app, lifespan="off")
+    if app is not None:
+        # Créer le handler Mangum pour Netlify
+        # lifespan="off" car Netlify Functions ne supporte pas les événements de lifespan
+        mangum_handler = Mangum(app, lifespan="off", api_gateway_base_path="")
 except Exception as e:
-    # En cas d'erreur d'import, créer un handler d'erreur
+    import_error = str(e)
     print(f"Erreur lors de l'import: {e}")
-    mangum_handler = None
-    app = None
+    import traceback
+    traceback.print_exc()
 
 def handler(event, context):
     """
@@ -43,20 +54,35 @@ def handler(event, context):
     Returns:
         Réponse HTTP (dict)
     """
+    # Vérifier si le handler est initialisé
     if mangum_handler is None:
+        error_msg = {
+            'error': 'Handler not initialized',
+            'message': 'Erreur lors de l\'initialisation de l\'application',
+            'import_error': import_error if import_error else 'Unknown error'
+        }
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                'error': 'Handler not initialized',
-                'message': 'Erreur lors de l\'initialisation de l\'application'
-            })
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps(error_msg)
         }
     
     try:
-        # Convertir l'événement Netlify en format Mangum
-        # Netlify Functions Python passe l'événement comme un dict
+        # Netlify Functions passe l'événement directement à Mangum
+        # Mangum gère la conversion du format Netlify vers ASGI
         response = mangum_handler(event, context)
+        
+        # S'assurer que la réponse a le bon format
+        if isinstance(response, dict):
+            # Ajouter CORS headers si pas déjà présents
+            if 'headers' in response:
+                response['headers'].setdefault('Access-Control-Allow-Origin', '*')
+            else:
+                response['headers'] = {'Access-Control-Allow-Origin': '*'}
+        
         return response
     except Exception as e:
         print(f"Erreur dans le handler: {e}")
@@ -64,9 +90,13 @@ def handler(event, context):
         traceback.print_exc()
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps({
                 'error': str(e),
-                'message': 'Erreur lors du traitement de la requête'
+                'message': 'Erreur lors du traitement de la requête',
+                'type': type(e).__name__
             })
         }

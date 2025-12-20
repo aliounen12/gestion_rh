@@ -1,0 +1,14 @@
+# Requirements optimisés pour Netlify Functions
+# Version minimale pour réduire les problèmes de déploiement
+
+fastapi==0.104.1
+pydantic==2.5.0
+python-dotenv==1.0.0
+requests==2.31.0
+mangum==0.17.0
+
+# Optionnel : seulement si vous utilisez PostgreSQL sur Netlify
+# psycopg2-binary==2.9.9
+
+# Note: uvicorn n'est pas nécessaire pour Netlify Functions
+# Il est seulement utilisé pour le développement local
