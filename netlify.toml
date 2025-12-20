@@ -4,7 +4,7 @@
   publish = "."
 
 [build.environment]
-  PYTHON_VERSION = "3.11"
+  PYTHON_VERSION = "3.12"
 
 # Redirects pour l'API
 # Rediriger les requêtes API vers la fonction Netlify
