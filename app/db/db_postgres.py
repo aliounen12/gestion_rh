@@ -207,9 +207,16 @@ def get_available_prime_types() -> List[str]:
     return list(set([prime["type_prime"] for prime in primes_db]))
 
 # Chargement initial des articles depuis PostgreSQL
-import sys
-if sys.stdout.encoding and 'utf' in sys.stdout.encoding.lower():
-    print("🔄 Chargement des articles depuis PostgreSQL...")
-else:
-    print("Chargement des articles depuis PostgreSQL...")
-code_articles = load_articles_from_postgres()
+# Chargement lazy pour éviter les problèmes au démarrage sur Netlify
+code_articles = {}
+try:
+    import sys
+    if sys.stdout.encoding and 'utf' in sys.stdout.encoding.lower():
+        print("🔄 Chargement des articles depuis PostgreSQL...")
+    else:
+        print("Chargement des articles depuis PostgreSQL...")
+    code_articles = load_articles_from_postgres()
+except Exception as e:
+    print(f"⚠️ Erreur lors du chargement initial des articles: {e}")
+    print("Les articles seront chargés à la demande")
+    code_articles = {}

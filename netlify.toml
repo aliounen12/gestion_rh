@@ -6,9 +6,28 @@
 [build.environment]
   PYTHON_VERSION = "3.11"
 
-# Redirects pour l'API - Toutes les requêtes passent par la fonction api
+# Redirects pour l'API
+# Rediriger les requêtes API vers la fonction Netlify
 [[redirects]]
-  from = "/*"
+  from = "/assistant/*"
   to = "/.netlify/functions/api"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/gestionrh"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/docs"
+  to = "/.netlify/functions/api/docs"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/redoc"
+  to = "/.netlify/functions/api/redoc"
   status = 200
   force = false
