@@ -3,8 +3,8 @@
   functions = "netlify/functions"
   publish = "."
 
-# Ne pas spécifier de version Python - Netlify utilisera sa version par défaut
-# Cela évite les problèmes avec mise et python-build
+# Python version spécifiée dans runtime.txt (3.11.8)
+# Cette version a des wheels précompilés pour psycopg2-binary
 
 # Redirects pour l'API
 # Toutes les requêtes sont redirigées vers la fonction Netlify avec le chemin complet
