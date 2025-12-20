@@ -21,6 +21,23 @@ app.add_middleware(
     allow_headers=["*"],  # Autorise tous les headers
 )
 
+# Endpoint racine
+@app.get("/")
+def root():
+    """Endpoint racine avec informations sur l'API"""
+    return {
+        "message": "API Gestion RH Assistant",
+        "version": "1.0.0",
+        "description": "API simplifiée avec assistant IA pour la gestion des ressources humaines",
+        "endpoints": {
+            "documentation": "/docs",
+            "chat": "POST /assistant/chat",
+            "tools": "GET /assistant/tools",
+            "health": "GET /gestionrh"
+        },
+        "openapi_schema": "/openapi.json"
+    }
+
 # Inclusion des routers - API simplifiée avec 3 endpoints seulement
 app.include_router(assistant_router)
 app.include_router(health_router)

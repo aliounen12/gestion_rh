@@ -7,27 +7,51 @@
   PYTHON_VERSION = "3.12"
 
 # Redirects pour l'API
-# Rediriger les requêtes API vers la fonction Netlify
+# Toutes les requêtes sont redirigées vers la fonction Netlify avec le chemin complet
+
+# Root endpoint
 [[redirects]]
-  from = "/assistant/*"
+  from = "/"
   to = "/.netlify/functions/api"
   status = 200
-  force = false
+  force = true
 
+# OpenAPI schema
 [[redirects]]
-  from = "/gestionrh"
-  to = "/.netlify/functions/api"
+  from = "/openapi.json"
+  to = "/.netlify/functions/api/openapi.json"
   status = 200
-  force = false
+  force = true
 
+# Documentation
 [[redirects]]
   from = "/docs"
   to = "/.netlify/functions/api/docs"
   status = 200
-  force = false
+  force = true
 
 [[redirects]]
   from = "/redoc"
   to = "/.netlify/functions/api/redoc"
   status = 200
-  force = false
+  force = true
+
+# Endpoints API avec forwarding du chemin complet
+[[redirects]]
+  from = "/assistant/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/gestionrh"
+  to = "/.netlify/functions/api/gestionrh"
+  status = 200
+  force = true
+
+# Catch-all : toutes les autres requêtes vers l'API
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
