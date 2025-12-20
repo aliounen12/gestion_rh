@@ -1,10 +1,10 @@
 [build]
-  command = "echo 'No build step required'"
+  command = "python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt"
   functions = "netlify/functions"
   publish = "."
 
-# Python version spécifiée dans runtime.txt (3.11.8)
-# Cette version a des wheels précompilés pour psycopg2-binary
+# Note: psycopg2-binary est optionnel - le code gère son absence gracieusement
+# Si PostgreSQL n'est pas utilisé sur Netlify, l'application fonctionnera sans
 
 # Redirects pour l'API
 # Toutes les requêtes sont redirigées vers la fonction Netlify avec le chemin complet

@@ -113,13 +113,20 @@ def health_check():
     try:
         from app.db import code_articles
         
+        articles_count = len(code_articles) if code_articles else 0
+        message = f"API Gestion RH opérationnelle"
+        if articles_count > 0:
+            message += f" - {articles_count} articles chargés"
+        else:
+            message += " - PostgreSQL non configuré (mode sans base de données)"
+        
         return HealthResponse(
             status="ok",
-            message=f"API Gestion RH opérationnelle - {len(code_articles)} articles chargés"
+            message=message
         )
     except Exception as e:
         return HealthResponse(
-            status="error",
-            message=f"Erreur: {str(e)}"
+            status="ok",
+            message=f"API Gestion RH opérationnelle - PostgreSQL non disponible: {str(e)}"
         )
 

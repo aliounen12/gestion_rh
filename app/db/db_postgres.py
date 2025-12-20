@@ -3,9 +3,17 @@
 Fonctions de base de données PostgreSQL pour utiliser la table articles existante
 """
 
-import psycopg2
-import psycopg2.extras
 from typing import Dict, List, Optional
+
+# Import optionnel de psycopg2 - gère l'absence gracieusement
+try:
+    import psycopg2
+    import psycopg2.extras
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+    print("⚠️ psycopg2-binary non disponible - PostgreSQL désactivé")
+
 from app.config import settings
 
 # Cache pour les articles (chargé une seule fois)
@@ -13,6 +21,10 @@ _articles_cache: Optional[Dict[str, str]] = None
 
 def get_db_connection():
     """Obtient une connexion à la base de données PostgreSQL"""
+    if not PSYCOPG2_AVAILABLE:
+        print("⚠️ PostgreSQL non disponible - psycopg2-binary n'est pas installé")
+        return None
+    
     try:
         connection = psycopg2.connect(
             host=settings.DB_HOST,
@@ -22,7 +34,7 @@ def get_db_connection():
             password=settings.DB_PASSWORD
         )
         return connection
-    except psycopg2.Error as e:
+    except Exception as e:
         print(f"Erreur de connexion à PostgreSQL: {e}")
         return None
 
@@ -41,6 +53,10 @@ def load_articles_from_postgres() -> Dict[str, str]:
         return articles
     
     try:
+        if not PSYCOPG2_AVAILABLE:
+            print("⚠️ PostgreSQL non disponible - articles non chargés")
+            return articles
+        
         cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute("SELECT article_code, contenu FROM public.articles")
         
@@ -53,11 +69,12 @@ def load_articles_from_postgres() -> Dict[str, str]:
         
         print(f"✅ {len(articles)} articles chargés depuis PostgreSQL")
         
-    except psycopg2.Error as e:
+    except Exception as e:
         print(f"Erreur lors du chargement des articles: {e}")
     finally:
-        cursor.close()
-        connection.close()
+        if connection:
+            cursor.close()
+            connection.close()
     
     _articles_cache = articles
     return articles
@@ -124,6 +141,10 @@ def get_article_by_code(article_code: str) -> Optional[str]:
 def search_articles_by_keyword(keyword: str) -> List[dict]:
     """Recherche des articles par mot-clé dans PostgreSQL"""
     results = []
+    
+    if not PSYCOPG2_AVAILABLE:
+        return results
+    
     keyword_lower = keyword.lower()
     
     connection = get_db_connection()
@@ -131,6 +152,8 @@ def search_articles_by_keyword(keyword: str) -> List[dict]:
         return results
     
     try:
+        if not PSYCOPG2_AVAILABLE:
+            return results
         cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute(
             "SELECT article_code, contenu FROM public.articles WHERE LOWER(contenu) LIKE %s",
@@ -155,16 +178,20 @@ def search_articles_by_keyword(keyword: str) -> List[dict]:
                     "position": index
                 })
     
-    except psycopg2.Error as e:
+    except Exception as e:
         print(f"Erreur lors de la recherche: {e}")
     finally:
-        cursor.close()
-        connection.close()
+        if connection:
+            cursor.close()
+            connection.close()
     
     return results[:10]  # Limiter à 10 résultats
 
 def get_articles_count() -> int:
     """Retourne le nombre d'articles dans la table PostgreSQL"""
+    if not PSYCOPG2_AVAILABLE:
+        return 0
+    
     connection = get_db_connection()
     if not connection:
         return 0
@@ -174,12 +201,13 @@ def get_articles_count() -> int:
         cursor.execute("SELECT COUNT(*) FROM public.articles")
         count = cursor.fetchone()[0]
         return count
-    except psycopg2.Error as e:
+    except Exception as e:
         print(f"Erreur lors du comptage des articles: {e}")
         return 0
     finally:
-        cursor.close()
-        connection.close()
+        if connection:
+            cursor.close()
+            connection.close()
 
 # Base de données simulée pour les primes (peut être migrée vers PostgreSQL plus tard)
 primes_db = []
