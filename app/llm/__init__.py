@@ -1,8 +1,10 @@
 """
-Module LLM - Intégration OpenRouter
+Module LLM - Client pour les services d'IA
 """
 
-from .openrouter_client import OpenRouterClient, openrouter_client
+from .openrouter_client import OpenRouterClient
 
-__all__ = ["OpenRouterClient", "openrouter_client"]
+# Instance globale du client
+openrouter_client = OpenRouterClient()
 
+__all__ = ["openrouter_client", "OpenRouterClient"]

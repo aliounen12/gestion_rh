@@ -1,176 +1,111 @@
-# API de Gestion des Primes - Architecture Modulaire
+# ChatRH - API de Chat pour la Gestion RH
 
-## Description
+API FastAPI pour un système de chat intelligent dédié à la gestion des ressources humaines.
 
-Cette API de gestion des primes est conforme au Code du travail Sénégalais et utilise une architecture modulaire pour une meilleure organisation et maintenabilité du code.
+## 🚀 Fonctionnalités
 
-## Architecture
+- **Chat IA** : Interface de chat avec assistant IA via OpenRouter
+- **API REST** : Endpoints simplifiés et documentés
+- **Architecture modulaire** : Structure claire et extensible
 
-Le projet est maintenant organisé en plusieurs modules :
-
-### 📁 Structure des fichiers
+## 📁 Structure du projet
 
 ```
-GestionRH/
-├── main.py                    # Point d'entrée principal de l'API
-├── schemas.py                 # Modèles Pydantic pour la validation des données
-├── routers.py                 # Définition de tous les endpoints FastAPI
-├── db.py                      # Gestion de la base de données et logique métier
-├── articles_structures.csv    # Articles du Code du travail Sénégalais
-└── README.md                  # Documentation du projet
+chatrh/
+├── app/
+│   ├── api/
+│   │   ├── chat.py          # Router pour le chat
+│   │   └── health.py         # Router pour le health check
+│   ├── llm/
+│   │   └── openrouter_client.py  # Client OpenRouter
+│   ├── models/               # Schémas Pydantic (si nécessaire)
+│   ├── db/                   # Gestion base de données (optionnel)
+│   ├── tools/                # Outils utilitaires (optionnel)
+│   ├── config.py             # Configuration
+│   └── main.py               # Application FastAPI
+├── main.py                    # Point d'entrée local
+├── requirements.txt          # Dépendances Python
+└── README.md                 # Documentation
 ```
 
-### 🔧 Modules
+## 🔧 Installation
 
-#### `main.py`
-- Point d'entrée de l'application FastAPI
-- Configuration de l'application
-- Inclusion des routers
-- Démarrage automatique du serveur
-
-#### `schemas.py`
-- Définition de tous les modèles Pydantic
-- Validation des données d'entrée et de sortie
-- Schémas pour les réponses API
-
-#### `routers.py`
-- Définition de tous les endpoints FastAPI
-- Organisation par groupes (primes, articles, recherche)
-- Logique de contrôle des requêtes
-
-#### `db.py`
-- Gestion de la base de données en mémoire
-- Fonctions de manipulation des données
-- Logique métier pour la conformité légale
-
-## Endpoints disponibles
-
-### 🏠 Endpoints principaux
-- `GET /` : Informations sur l'API
-- `GET /test` : Test de fonctionnement
-
-### 💰 Gestion des primes
-- `POST /primes/` : Créer une nouvelle prime
-- `GET /primes/` : Récupérer toutes les primes
-- `GET /primes/{prime_id}` : Récupérer une prime par ID
-- `GET /primes/par-type/{type_prime}` : Récupérer les primes par type
-- `POST /primes/exemple` : Créer une prime d'exemple
-
-### 📋 Types de primes
-- `GET /types-primes/` : Liste des types de primes disponibles
-
-### ⚖️ Conformité légale
-- `GET /conformite/primes` : Documentation de conformité
-
-### 📚 Articles du Code du travail
-- `GET /articles/{article_code}` : Consulter un article spécifique
-- `GET /search/articles` : Rechercher des articles par mot-clé
-
-### 🤖 OpenRouter (IA)
-- `POST /openrouter/chat` : Chat générique avec OpenRouter
-- `POST /openrouter/analyze-prime` : Analyser une prime avec l'IA
-- `POST /openrouter/explain-article` : Expliquer un article avec l'IA
-- `POST /openrouter/search-explain` : Rechercher et expliquer avec l'IA
-- `POST /openrouter/enhanced-prime` : Créer une prime enrichie par l'IA
-- `GET /openrouter/models` : Liste des modèles disponibles
-
-## Utilisation
-
-### 🔧 Configuration de l'environnement virtuel
-
-Le projet utilise un environnement virtuel Python pour isoler les dépendances.
-
-#### Activation de l'environnement virtuel
+### 1. Créer l'environnement virtuel
 
 **Windows PowerShell :**
 ```powershell
-.\activate.ps1
-```
-
-**Windows CMD :**
-```cmd
-activate.bat
-```
-
-**Ou manuellement :**
-```bash
-# Windows
+python -m venv venv
 .\venv\Scripts\Activate.ps1
+```
 
-# Linux/Mac
+**Linux/Mac :**
+```bash
+python -m venv venv
 source venv/bin/activate
 ```
 
-#### Installation des dépendances
+### 2. Installer les dépendances
 
-Si les dépendances ne sont pas encore installées :
 ```bash
 pip install -r requirements.txt
 ```
 
-### Démarrage du serveur
+### 3. Configuration
 
-Une fois l'environnement virtuel activé :
+Créez un fichier `.env` à la racine :
+
+```env
+# OpenRouter (requis pour le chat)
+OPENROUTER_API_KEY=votre_cle_api
+OPENROUTER_MODEL=openai/gpt-3.5-turbo
+OPENROUTER_MAX_TOKENS=1000
+OPENROUTER_TEMPERATURE=0.7
+
+# API (optionnel)
+API_HOST=0.0.0.0
+API_PORT=8000
+DEBUG=True
+```
+
+## 🚀 Démarrage local
+
 ```bash
 python main.py
 ```
 
-ou
-```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+L'API sera disponible sur : http://localhost:8000
 
-### Documentation interactive
-Accédez à la documentation Swagger à l'adresse :
-http://localhost:8000/docs
+Documentation interactive : http://localhost:8000/docs
 
-### Exemple de création de prime
-```json
-{
-  "type_prime": "Prime de rendement",
-  "motif": "Excellente performance trimestrielle"
-}
-```
+## 📡 Endpoints disponibles
 
-## Avantages de l'architecture modulaire
+### Chat
 
-1. **Séparation des responsabilités** : Chaque module a un rôle bien défini
-2. **Maintenabilité** : Code plus facile à maintenir et à déboguer
-3. **Réutilisabilité** : Les modules peuvent être réutilisés dans d'autres projets
-4. **Testabilité** : Chaque module peut être testé indépendamment
-5. **Scalabilité** : Facile d'ajouter de nouvelles fonctionnalités
+- **`POST /chat`** : Chat avec l'assistant IA
+  ```json
+  {
+    "message": "Qu'est-ce qu'une prime de rendement ?",
+    "model": "openai/gpt-3.5-turbo",
+    "temperature": 0.7
+  }
+  ```
 
-## Fonctionnalités
+### Health Check
 
-- ✅ Chargement dynamique des articles depuis PostgreSQL
-- ✅ Validation des données avec Pydantic
-- ✅ Recherche intelligente d'articles pertinents
-- ✅ Génération automatique d'explications de conformité
-- ✅ **Intégration OpenRouter pour l'analyse IA** 🤖
-- ✅ Architecture modulaire et extensible
-- ✅ Documentation automatique avec Swagger
-- ✅ Gestion d'erreurs robuste
+- **`GET /health`** : Vérification de l'état de l'API
 
-## 🤖 Intégration OpenRouter
 
-L'API intègre maintenant OpenRouter pour enrichir les fonctionnalités avec l'intelligence artificielle :
+## 🛠️ Technologies utilisées
 
-- **Analyse intelligente de primes** : Analyse automatique de conformité avec l'IA
-- **Explication d'articles** : Explications simplifiées des articles du Code du travail
-- **Recherche contextuelle** : Recherche intelligente avec synthèse IA
-- **Création enrichie** : Création de primes avec explications générées par l'IA
+- **FastAPI** : Framework web moderne
+- **OpenRouter** : API pour accéder à différents modèles LLM
+- **Pydantic** : Validation des données
+- **Uvicorn** : Serveur ASGI pour FastAPI
 
-📖 **Voir [OPENROUTER_SETUP.md](OPENROUTER_SETUP.md) pour la configuration détaillée**
+## 📄 Licence
 
-### Configuration rapide OpenRouter
+MIT
 
-1. Créez un compte sur [OpenRouter.ai](https://openrouter.ai/)
-2. Obtenez votre clé API
-3. Ajoutez dans votre fichier `.env` :
-   ```env
-   OPENROUTER_API_KEY=votre_cle_api_ici
-   ```
+## 🤝 Contribution
 
-## Version
-
-**Version 4.1.0** - Architecture modulaire + Intégration OpenRouter
+Les contributions sont les bienvenues !

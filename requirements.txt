@@ -1,7 +1,5 @@
 fastapi==0.104.1
-pydantic>=2.12.0  # Version compatible avec Python 3.14
+pydantic>=2.12.0
 python-dotenv==1.0.0
 requests==2.31.0
-mangum==0.17.0
-# psycopg2-binary==2.9.9  # Optionnel - seulement si PostgreSQL est utilisé
-# uvicorn[standard]==0.24.0  # Seulement pour développement local
+uvicorn[standard]==0.24.0
