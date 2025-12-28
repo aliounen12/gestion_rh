@@ -1,17 +1,16 @@
-#!/usr/bin/env python3
 """
 Handler Vercel pour ChatRH API
-Vercel supporte nativement les applications ASGI (FastAPI/Starlette)
+Vercel s'attend à une variable 'handler' qui pointe vers l'application ASGI
 """
-
 import sys
 import os
 
 # Ajouter le répertoire parent au path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Importer l'application FastAPI
 from app.main import app
 
-# Vercel supporte nativement ASGI, on exporte directement l'app FastAPI
-# Pas besoin de Mangum pour Vercel
+# Vercel s'attend à une variable 'handler' qui pointe vers l'app ASGI
+handler = app
 
