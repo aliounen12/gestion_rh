@@ -135,11 +135,39 @@ Ces variables sont déjà configurées dans **Vercel Dashboard > Settings > Envi
 ## 🔍 Vérification
 
 Une fois déployé, testez :
-- `https://votre-projet.vercel.app/` → Infos API
-- `https://votre-projet.vercel.app/chat` → Endpoint chat
-- `https://votre-projet.vercel.app/health` → Health check
+
+1. **Endpoint racine** : `https://votre-projet.vercel.app/`
+   - Affiche les informations de l'API
+
+2. **Health check** : `https://votre-projet.vercel.app/health`
+   - Vérifie l'état de l'API et de la base de données
+   - Affiche si OpenRouter est configuré
+
+3. **Diagnostic** : `https://votre-projet.vercel.app/diagnostic`
+   - Affiche la configuration complète (sans exposer les mots de passe)
+   - Vérifie les variables d'environnement
+   - Utile pour déboguer les problèmes de configuration
+
+4. **Endpoint chat** : `https://votre-projet.vercel.app/chat`
+   - Testez avec une requête POST
 
 ## 🆘 Dépannage
+
+### Erreur : "Impossible de contacter l'assistant"
+
+1. **Vérifiez la configuration** :
+   - Allez sur `https://votre-projet.vercel.app/diagnostic`
+   - Vérifiez que `openrouter.api_key_configured` est `true`
+   - Vérifiez que `database.connected` est `true`
+
+2. **Vérifiez les variables d'environnement dans Vercel** :
+   - Allez dans Vercel Dashboard > Settings > Environment Variables
+   - Vérifiez que `OPENROUTER_API_KEY` est configurée
+   - Vérifiez que toutes les variables `DB_*` sont configurées
+
+3. **Vérifiez les logs Vercel** :
+   - Allez dans Vercel Dashboard > Deployments > Votre déploiement > Functions
+   - Regardez les logs pour voir l'erreur exacte
 
 ### Erreur : "psycopg2-binary not available"
 - Vérifiez que `psycopg2-binary==2.9.9` est dans `requirements.txt`
@@ -149,5 +177,11 @@ Une fois déployé, testez :
 - Vérifiez les paramètres de firewall de votre base de données
 
 ### Erreur : "Function timeout"
-- Les fonctions Vercel ont un timeout de 10s (gratuit)
-- Considérez optimiser les requêtes ou passer au plan Pro (60s)
+- Les fonctions Vercel ont un timeout de 10s (gratuit) ou 60s (pro)
+- Le timeout OpenRouter est configuré à 8s pour éviter les timeouts Vercel
+- Si le problème persiste, considérez passer au plan Pro
+
+### Erreur : "Erreur d'authentification (401)"
+- Vérifiez que votre clé API OpenRouter est valide
+- Allez sur https://openrouter.ai/keys pour vérifier vos clés
+- Assurez-vous que la clé est bien configurée dans Vercel Dashboard

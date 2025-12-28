@@ -59,11 +59,13 @@ class OpenRouterClient:
         }
         
         try:
+            # Timeout réduit pour Vercel (10s gratuit, 60s pro)
+            # On utilise 8s pour laisser une marge
             response = requests.post(
                 self.api_url,
                 json=payload,
                 headers=headers,
-                timeout=30
+                timeout=8
             )
             
             # Vérifier le statut de la réponse

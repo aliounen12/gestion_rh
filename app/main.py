@@ -176,13 +176,44 @@ def chat(request: ChatRequest):
         # Créer le prompt système avec les articles (CONTENU COMPLET)
         system_prompt = create_system_prompt(context, relevant_articles)
         
+        # Vérifier que la clé API est configurée
+        if not settings.OPENROUTER_API_KEY:
+            raise HTTPException(
+                status_code=500,
+                detail="OPENROUTER_API_KEY n'est pas configurée. Veuillez configurer cette variable d'environnement dans Vercel Dashboard."
+            )
+        
         # Appeler l'API OpenRouter
-        response = openrouter_client.chat_completion(
-            prompt=request.message,
-            system_prompt=system_prompt,
-            model=request.model,
-            temperature=request.temperature
-        )
+        try:
+            response = openrouter_client.chat_completion(
+                prompt=request.message,
+                system_prompt=system_prompt,
+                model=request.model,
+                temperature=request.temperature
+            )
+        except ValueError as e:
+            # Erreur spécifique d'OpenRouter (401, timeout, etc.)
+            error_msg = str(e)
+            if "401" in error_msg or "authentification" in error_msg.lower():
+                raise HTTPException(
+                    status_code=401,
+                    detail="Erreur d'authentification OpenRouter. Vérifiez que votre clé API est valide dans Vercel Dashboard."
+                )
+            elif "timeout" in error_msg.lower():
+                raise HTTPException(
+                    status_code=504,
+                    detail="Timeout lors de l'appel à OpenRouter. Le service peut être surchargé, réessayez plus tard."
+                )
+            else:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Erreur lors de l'appel à OpenRouter: {error_msg}"
+                )
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Erreur de connexion à OpenRouter: {str(e)}"
+            )
         
         # Formater la réponse
         model_used = request.model or settings.OPENROUTER_MODEL
@@ -190,12 +221,20 @@ def chat(request: ChatRequest):
         
         return ChatResponse(**formatted)
         
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors du chat: {str(e)}")
+        # Erreur générale
+        import traceback
+        error_detail = str(e)
+        print(f"Erreur inattendue: {error_detail}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors du traitement de la requête: {error_detail}"
+        )
 
 # Endpoint health check
 @app.get("/health", response_model=HealthResponse)
@@ -213,6 +252,12 @@ def health_check():
         else:
             message += " - PostgreSQL non configuré ou base vide"
         
+        # Vérifier aussi la clé API OpenRouter
+        if not settings.OPENROUTER_API_KEY:
+            message += " - ⚠️ OPENROUTER_API_KEY non configurée"
+        else:
+            message += " - ✅ OpenRouter configuré"
+        
         return HealthResponse(
             status="ok",
             message=message
@@ -222,6 +267,39 @@ def health_check():
             status="ok",
             message=f"API ChatRH opérationnelle - Erreur base de données: {str(e)}"
         )
+
+# Endpoint de diagnostic
+@app.get("/diagnostic")
+def diagnostic():
+    """
+    Endpoint de diagnostic pour vérifier la configuration
+    """
+    diagnostic_info = {
+        "api_status": "ok",
+        "openrouter": {
+            "api_key_configured": bool(settings.OPENROUTER_API_KEY),
+            "api_key_length": len(settings.OPENROUTER_API_KEY) if settings.OPENROUTER_API_KEY else 0,
+            "model": settings.OPENROUTER_MODEL,
+            "api_url": settings.OPENROUTER_API_URL
+        },
+        "database": {
+            "host": settings.DB_HOST if settings.DB_HOST != "localhost" else "non configuré",
+            "port": settings.DB_PORT,
+            "name": settings.DB_NAME,
+            "user": settings.DB_USER if settings.DB_USER != "postgres" else "non configuré",
+            "password_configured": bool(settings.DB_PASSWORD)
+        }
+    }
+    
+    try:
+        articles_count = get_articles_count()
+        diagnostic_info["database"]["articles_count"] = articles_count
+        diagnostic_info["database"]["connected"] = True
+    except Exception as e:
+        diagnostic_info["database"]["connected"] = False
+        diagnostic_info["database"]["error"] = str(e)
+    
+    return diagnostic_info
 
 # Démarrage automatique du serveur (uniquement en local)
 if __name__ == "__main__":
