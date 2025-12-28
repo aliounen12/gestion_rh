@@ -84,15 +84,62 @@ Documentation interactive : http://localhost:8000/docs
 - **`POST /chat`** : Chat avec l'assistant IA
   ```json
   {
-    "message": "Qu'est-ce qu'une prime de rendement ?",
+    "message": "Quels sont les droits des travailleurs concernant les congés ?",
     "model": "openai/gpt-3.5-turbo",
     "temperature": 0.7
+  }
+  ```
+  
+  **Réponse :**
+  ```json
+  {
+    "response": "Réponse de l'assistant IA basée sur le Code du travail...",
+    "model": "openai/gpt-3.5-turbo"
   }
   ```
 
 ### Health Check
 
-- **`GET /health`** : Vérification de l'état de l'API
+- **`GET /health`** : Vérification de l'état de l'API et de la connexion PostgreSQL
+
+## 💬 Comment poser des questions
+
+### Via la documentation Swagger
+
+1. Démarrez l'API : `python main.py`
+2. Ouvrez votre navigateur : http://localhost:8000/docs
+3. Cliquez sur `POST /chat` > "Try it out"
+4. Entrez votre question dans le champ `message`
+5. Cliquez sur "Execute"
+
+### Via cURL
+
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Quels sont les droits concernant les congés ?"
+  }'
+```
+
+### Via Python
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/chat",
+    json={"message": "Quels sont les droits concernant les congés ?"}
+)
+print(response.json()["response"])
+```
+
+### Exemples de questions
+
+- "Quels sont les droits des travailleurs concernant les congés ?"
+- "Comment calculer les frais de transport ?"
+- "Quelles sont les obligations de l'employeur ?"
+- "Expliquez-moi l'article L.148 du Code du travail"
 
 
 ## 🛠️ Technologies utilisées

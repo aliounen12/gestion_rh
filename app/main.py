@@ -16,6 +16,7 @@ from app.tools import (
     get_rh_context,
     extract_keywords
 )
+from app.db import get_articles_count
 
 # Création de l'application FastAPI
 app = FastAPI(
@@ -86,9 +87,94 @@ def chat(request: ChatRequest):
         keywords = extract_keywords(request.message)
         topic = keywords[0] if keywords else None
         
-        # Créer le prompt système avec contexte
+        # Rechercher des articles pertinents dans la base de données
+        relevant_articles = []
+        try:
+            from app.db import search_articles, get_articles_by_sujet, get_all_sujets
+            
+            # Étape 1 : Chercher par sujet si identifié
+            sujets = get_all_sujets()
+            sujet_trouve = None
+            
+            # Chercher dans les keywords
+            for keyword in keywords:
+                for sujet in sujets:
+                    if keyword.lower() in sujet['titre_sujet'].lower() or str(sujet['id']) == keyword:
+                        sujet_trouve = sujet
+                        articles = get_articles_by_sujet(sujet['id'])
+                        relevant_articles.extend(articles)
+                        break
+                if sujet_trouve:
+                    break
+            
+            # Étape 2 : Si pas de sujet trouvé, chercher dans le message directement
+            if not sujet_trouve:
+                message_lower = request.message.lower()
+                # Mapping direct des mots-clés vers les sujets
+                keyword_mapping = {
+                    "congé": "Congés",
+                    "congés": "Congés",
+                    "conges": "Congés",  # Sans accent
+                    "transport": "Transport",
+                    "tansport": "Transport"  # Typo
+                }
+                
+                # Chercher les mots-clés dans le message
+                for keyword, sujet_nom in keyword_mapping.items():
+                    if keyword in message_lower:
+                        for sujet in sujets:
+                            if sujet['titre_sujet'] == sujet_nom:
+                                sujet_trouve = sujet
+                                articles = get_articles_by_sujet(sujet['id'])
+                                relevant_articles.extend(articles)
+                                break
+                        if sujet_trouve:
+                            break
+                
+                # Si toujours pas trouvé, chercher par titre de sujet
+                if not sujet_trouve:
+                    for sujet in sujets:
+                        titre_lower = sujet['titre_sujet'].lower()
+                        # Vérifier si le titre complet est dans le message
+                        if titre_lower in message_lower:
+                            sujet_trouve = sujet
+                            articles = get_articles_by_sujet(sujet['id'])
+                            relevant_articles.extend(articles)
+                            break
+                        # Vérifier si des mots du titre sont dans le message
+                        elif any(word in message_lower for word in titre_lower.split() if len(word) > 3):
+                            sujet_trouve = sujet
+                            articles = get_articles_by_sujet(sujet['id'])
+                            relevant_articles.extend(articles)
+                            break
+            
+            # Étape 3 : Recherche par mot-clé dans le contenu des articles
+            if not relevant_articles:
+                # Extraire les mots importants du message (mots de 4+ caractères)
+                words = [w for w in request.message.lower().split() if len(w) > 4]
+                for word in words[:5]:  # Limiter à 5 mots
+                    articles = search_articles(word, limit=5)
+                    # Éviter les doublons
+                    existing_ids = {a['article_id'] for a in relevant_articles}
+                    for article in articles:
+                        if article['article_id'] not in existing_ids:
+                            relevant_articles.append(article)
+                    if len(relevant_articles) >= 10:
+                        break
+            
+            # Limiter à 10 articles maximum pour éviter un contexte trop long
+            relevant_articles = relevant_articles[:10]
+            
+        except Exception as e:
+            # Si erreur, continuer sans les articles
+            print(f"Erreur lors de la recherche d'articles: {e}")
+            relevant_articles = []
+        
+        # Construire le contexte avec les données PostgreSQL
         context = get_rh_context(topic)
-        system_prompt = create_system_prompt(context)
+        
+        # Créer le prompt système avec les articles (CONTENU COMPLET)
+        system_prompt = create_system_prompt(context, relevant_articles)
         
         # Appeler l'API OpenRouter
         response = openrouter_client.chat_completion(
@@ -117,12 +203,25 @@ def health_check():
     """
     Health Check
     
-    Vérifie l'état de l'API ChatRH.
+    Vérifie l'état de l'API ChatRH et de la connexion PostgreSQL.
     """
-    return HealthResponse(
-        status="ok",
-        message="API ChatRH opérationnelle"
-    )
+    try:
+        articles_count = get_articles_count()
+        message = f"API ChatRH opérationnelle"
+        if articles_count > 0:
+            message += f" - {articles_count} articles disponibles dans la base de données"
+        else:
+            message += " - PostgreSQL non configuré ou base vide"
+        
+        return HealthResponse(
+            status="ok",
+            message=message
+        )
+    except Exception as e:
+        return HealthResponse(
+            status="ok",
+            message=f"API ChatRH opérationnelle - Erreur base de données: {str(e)}"
+        )
 
 # Démarrage automatique du serveur (uniquement en local)
 if __name__ == "__main__":
