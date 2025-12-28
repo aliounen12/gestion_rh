@@ -8,8 +8,8 @@ import sys
 
 # Import optionnel de psycopg2 - gère l'absence gracieusement
 try:
-import psycopg2
-import psycopg2.extras
+    import psycopg2
+    import psycopg2.extras
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     PSYCOPG2_AVAILABLE = False
@@ -84,8 +84,8 @@ def get_articles_by_sujet(id_sujet: int) -> List[Dict]:
         print(f"Erreur lors de la récupération des articles: {e}")
     finally:
         if connection:
-        cursor.close()
-        connection.close()
+            cursor.close()
+            connection.close()
     
     return articles
 
@@ -255,8 +255,8 @@ def get_sujet_by_id(sujet_id: int) -> Optional[Dict]:
         print(f"Erreur lors de la récupération du sujet: {e}")
     finally:
         if connection:
-        cursor.close()
-        connection.close()
+            cursor.close()
+            connection.close()
     
     return None
 
@@ -284,5 +284,5 @@ def get_articles_count() -> int:
         return 0
     finally:
         if connection:
-        cursor.close()
-        connection.close()
+            cursor.close()
+            connection.close()
