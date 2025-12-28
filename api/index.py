@@ -1,16 +1,18 @@
 """
 Handler Vercel pour ChatRH API
-Vercel s'attend à une variable 'handler' qui pointe vers l'application ASGI
 """
 import sys
 import os
+from pathlib import Path
 
-# Ajouter le répertoire parent au path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Ajouter le répertoire parent au path Python
+current_file = Path(__file__).resolve()
+project_root = current_file.parent.parent
+sys.path.insert(0, str(project_root))
 
 # Importer l'application FastAPI
 from app.main import app
 
-# Vercel s'attend à une variable 'handler' qui pointe vers l'app ASGI
-handler = app
+# Vercel détecte automatiquement les applications ASGI
+# On exporte directement l'app (pas besoin de variable handler)
 

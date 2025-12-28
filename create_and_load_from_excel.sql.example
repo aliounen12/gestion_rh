@@ -1,0 +1,45 @@
+-- Exemple de structure pour create_and_load_from_excel.sql
+-- Remplacez ce fichier par votre vrai script SQL
+
+-- ============================================
+-- CRÉATION DES TABLES
+-- ============================================
+
+-- Table des sujets
+CREATE TABLE IF NOT EXISTS public.sujet (
+    id SERIAL PRIMARY KEY,
+    titre_sujet VARCHAR(255) NOT NULL,
+    description TEXT
+);
+
+-- Table des articles
+CREATE TABLE IF NOT EXISTS public.article (
+    article_id SERIAL PRIMARY KEY,
+    id_sujet INTEGER NOT NULL,
+    num_article VARCHAR(100),
+    source VARCHAR(255),
+    contenu TEXT,
+    FOREIGN KEY (id_sujet) REFERENCES public.sujet(id)
+);
+
+-- ============================================
+-- INSERTION DES DONNÉES
+-- ============================================
+
+-- Insérer les sujets
+INSERT INTO public.sujet (id, titre_sujet, description) VALUES
+(1, 'Congés', 'Réglementation sur les congés payés'),
+(2, 'Transport', 'Réglementation sur les transports');
+
+-- Insérer les articles
+INSERT INTO public.article (article_id, id_sujet, num_article, source, contenu) VALUES
+(1, 1, 'Art.L.148', 'Code du travail 1997', 'Contenu de l''article L.148...'),
+(2, 1, 'Art.L.149', 'Code du travail 1997', 'Contenu de l''article L.149...');
+
+-- ============================================
+-- NOTES IMPORTANTES
+-- ============================================
+-- 1. Utilisez IF NOT EXISTS pour éviter les erreurs si les tables existent déjà
+-- 2. Si vous avez des contraintes UNIQUE, utilisez ON CONFLICT DO NOTHING pour les INSERT
+-- 3. Vérifiez que les IDs correspondent entre sujets et articles
+-- 4. Assurez-vous que l'encodage est UTF-8 pour les caractères français
