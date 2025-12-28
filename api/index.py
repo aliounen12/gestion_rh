@@ -13,6 +13,6 @@ sys.path.insert(0, str(project_root))
 # Importer l'application FastAPI
 from app.main import app
 
-# Vercel détecte automatiquement les applications ASGI
-# On exporte directement l'app (pas besoin de variable handler)
+# Vercel cherche une variable 'handler' qui pointe vers l'app ASGI
+handler = app
 
