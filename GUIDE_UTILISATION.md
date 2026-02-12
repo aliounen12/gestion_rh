@@ -91,8 +91,28 @@ curl http://localhost:8000/health
 ```json
 {
   "status": "ok",
-  "message": "API ChatRH opérationnelle - 281 articles disponibles dans la base de données"
+  "message": "API ChatRH opérationnelle - 282 articles disponibles dans la source de données"
 }
+```
+
+### 4. Recherche d'articles (par mot-clé ou numéro L.xxx)
+
+**URL** : `GET http://localhost:8000/articles/search?q=...&limit=...`
+
+Exemples :
+
+```bash
+curl "http://localhost:8000/articles/search?q=conge&limit=5"
+```
+
+```bash
+curl "http://localhost:8000/articles/search?q=L.148&limit=1"
+```
+
+**Récupérer un article directement :**
+
+```bash
+curl "http://localhost:8000/articles/L.148"
 ```
 
 ## 💬 Exemples de questions à poser

@@ -9,9 +9,10 @@ if __name__ == "__main__":
     import uvicorn
     from app.config import settings
     
-    print("🚀 Démarrage de l'API ChatRH")
-    print(f"🌐 Serveur disponible sur: http://localhost:{settings.API_PORT}")
-    print("📖 Documentation: http://localhost:8000/docs")
+    # Éviter les emojis: certaines consoles Windows (cp1252) lèvent UnicodeEncodeError
+    print("Demarrage de l'API ChatRH")
+    print(f"Serveur disponible sur: http://localhost:{settings.API_PORT}")
+    print("Documentation: http://localhost:8000/docs")
     
     uvicorn.run(
         "app.main:app",

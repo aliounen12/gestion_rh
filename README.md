@@ -61,6 +61,10 @@ OPENROUTER_MODEL=openai/gpt-3.5-turbo
 OPENROUTER_MAX_TOKENS=1000
 OPENROUTER_TEMPERATURE=0.7
 
+# Source de données (DOCX)
+# Optionnel: si vide, l'app lit le fichier `Code_du_travail_SN` à la racine du projet
+CODE_TRAVAIL_PATH=C:\chemin\vers\Code_du_travail_SN.docx
+
 # API (optionnel)
 API_HOST=0.0.0.0
 API_PORT=8000
@@ -100,7 +104,12 @@ Documentation interactive : http://localhost:8000/docs
 
 ### Health Check
 
-- **`GET /health`** : Vérification de l'état de l'API et de la connexion PostgreSQL
+- **`GET /health`** : Vérification de l'état de l'API et de la source de données
+
+### Recherche d'articles
+
+- **`GET /articles/search?q=...&limit=...`** : Recherche (mots-clés ou numéros d'article `L.148`, `L148`, `article 148`)
+- **`GET /articles/{num_article}`** : Récupération directe (ex: `L.148`, `148`, `L148`)
 
 ## 💬 Comment poser des questions
 

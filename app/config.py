@@ -31,5 +31,9 @@ class Settings:
     DB_USER = os.getenv("DB_USER", "postgres")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
+    # Source de données (fichier) - Code du travail DOCX
+    # Par défaut: fichier `Code_du_travail_SN` à la racine du projet
+    CODE_TRAVAIL_PATH = os.getenv("CODE_TRAVAIL_PATH", "")
+
 # Instance globale des paramètres
 settings = Settings()

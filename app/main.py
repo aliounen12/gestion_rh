@@ -3,10 +3,10 @@
 Application FastAPI principale pour ChatRH
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from app.config import settings
 from app.llm import openrouter_client
 from app.tools import (
@@ -68,6 +68,32 @@ def root():
         }
     }
 
+
+@app.get("/articles/search")
+def search_articles_endpoint(q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, le=50)):
+    """
+    Recherche d'articles dans le Code du travail.
+    Exemples de requêtes: "congé", "L.148", "L148", "article 148".
+    """
+    from app.db import search_articles
+    results = search_articles(q, limit=limit)
+    # Ne pas renvoyer le champ interne `contenu_norm`
+    return [{k: v for k, v in a.items() if k != "contenu_norm"} for a in results]
+
+
+@app.get("/articles/{num_article}")
+def get_article_endpoint(num_article: str):
+    """
+    Récupère un article par numéro.
+    Exemples: /articles/L.148 , /articles/148 , /articles/L148
+    """
+    from app.db import get_article_by_num_article
+
+    article = get_article_by_num_article(num_article)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article introuvable")
+    return {k: v for k, v in article.items() if k != "contenu_norm"}
+
 # Endpoint chat
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
@@ -87,7 +113,7 @@ def chat(request: ChatRequest):
         keywords = extract_keywords(request.message)
         topic = keywords[0] if keywords else None
         
-        # Rechercher des articles pertinents dans la base de données
+        # Rechercher des articles pertinents dans la source de données (fichier Code_du_travail_SN)
         relevant_articles = []
         try:
             from app.db import search_articles, get_articles_by_sujet, get_all_sujets
@@ -170,7 +196,7 @@ def chat(request: ChatRequest):
             print(f"Erreur lors de la recherche d'articles: {e}")
             relevant_articles = []
         
-        # Construire le contexte avec les données PostgreSQL
+        # Construire le contexte avec les données de la source
         context = get_rh_context(topic)
         
         # Créer le prompt système avec les articles (CONTENU COMPLET)
@@ -242,15 +268,15 @@ def health_check():
     """
     Health Check
     
-    Vérifie l'état de l'API ChatRH et de la connexion PostgreSQL.
+    Vérifie l'état de l'API ChatRH et l'accès à la source de données (fichier).
     """
     try:
         articles_count = get_articles_count()
         message = f"API ChatRH opérationnelle"
         if articles_count > 0:
-            message += f" - {articles_count} articles disponibles dans la base de données"
+            message += f" - {articles_count} articles disponibles dans la source de données"
         else:
-            message += " - PostgreSQL non configuré ou base vide"
+            message += " - Source de données indisponible ou vide"
         
         # Vérifier aussi la clé API OpenRouter
         if not settings.OPENROUTER_API_KEY:
@@ -282,31 +308,29 @@ def diagnostic():
             "model": settings.OPENROUTER_MODEL,
             "api_url": settings.OPENROUTER_API_URL
         },
-        "database": {
-            "host": settings.DB_HOST if settings.DB_HOST != "localhost" else "non configuré",
-            "port": settings.DB_PORT,
-            "name": settings.DB_NAME,
-            "user": settings.DB_USER if settings.DB_USER != "postgres" else "non configuré",
-            "password_configured": bool(settings.DB_PASSWORD)
-        }
+        "data_source": {
+            "type": "docx_file",
+            "code_travail_path": settings.CODE_TRAVAIL_PATH or "par défaut (Code_du_travail_SN à la racine du projet)"
+        },
     }
     
     try:
         articles_count = get_articles_count()
-        diagnostic_info["database"]["articles_count"] = articles_count
-        diagnostic_info["database"]["connected"] = True
+        diagnostic_info["data_source"]["articles_count"] = articles_count
+        diagnostic_info["data_source"]["loaded"] = True
     except Exception as e:
-        diagnostic_info["database"]["connected"] = False
-        diagnostic_info["database"]["error"] = str(e)
+        diagnostic_info["data_source"]["loaded"] = False
+        diagnostic_info["data_source"]["error"] = str(e)
     
     return diagnostic_info
 
 # Démarrage automatique du serveur (uniquement en local)
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Démarrage de l'API ChatRH")
-    print(f"🌐 Serveur disponible sur: http://localhost:{settings.API_PORT}")
-    print("📖 Documentation: http://localhost:8000/docs")
+    # Éviter les emojis: certaines consoles Windows (cp1252) lèvent UnicodeEncodeError
+    print("Demarrage de l'API ChatRH")
+    print(f"Serveur disponible sur: http://localhost:{settings.API_PORT}")
+    print("Documentation: http://localhost:8000/docs")
     
     uvicorn.run(
         "app.main:app",
