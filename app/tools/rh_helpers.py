@@ -16,7 +16,12 @@ def get_rh_context(topic: Optional[str] = None) -> str:
         Le contexte RH formaté avec les données de la base
     """
     try:
-        from app.db import get_all_sujets, get_sujet_by_id, get_articles_by_sujet
+        from app.db import (
+            get_all_sujets,
+            get_sujet_by_id,
+            get_articles_by_sujet,
+            get_sujet_grouped_by_chapitre,
+        )
         
         # Récupérer tous les sujets disponibles
         sujets = get_all_sujets()
@@ -49,6 +54,14 @@ Domaines d'expertise:
                     context += f"\nFocus sur: {sujet['titre_sujet']}\n"
                     context += f"Description: {sujet['description']}\n"
                     context += f"Nombre d'articles disponibles: {len(articles)}\n"
+                    grouped = get_sujet_grouped_by_chapitre(sujet_id)
+                    if grouped and grouped.get("chapitres"):
+                        context += "Structure (chapitres du titre) :\n"
+                        for bloc in grouped["chapitres"]:
+                            context += f"  - {bloc['chapitre']}\n"
+                        if grouped.get("articles_sans_chapitre"):
+                            n = len(grouped["articles_sans_chapitre"])
+                            context += f"  - Articles avant le premier chapitre : {n} article(s)\n"
                     return context
             except ValueError:
                 pass
@@ -57,10 +70,19 @@ Domaines d'expertise:
             topic_lower = topic.lower()
             for sujet in sujets:
                 if topic_lower in sujet['titre_sujet'].lower():
-                    articles = get_articles_by_sujet(sujet['id'])
+                    sid = sujet["id"]
+                    articles = get_articles_by_sujet(sid)
                     context += f"\nFocus sur: {sujet['titre_sujet']}\n"
                     context += f"Description: {sujet['description']}\n"
                     context += f"Nombre d'articles disponibles: {len(articles)}\n"
+                    grouped = get_sujet_grouped_by_chapitre(sid)
+                    if grouped and grouped.get("chapitres"):
+                        context += "Structure (chapitres du titre) :\n"
+                        for bloc in grouped["chapitres"]:
+                            context += f"  - {bloc['chapitre']}\n"
+                        if grouped.get("articles_sans_chapitre"):
+                            n = len(grouped["articles_sans_chapitre"])
+                            context += f"  - Articles avant le premier chapitre : {n} article(s)\n"
                     return context
         
         return context

@@ -23,6 +23,14 @@ class Settings:
     OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
     OPENROUTER_MAX_TOKENS = int(os.getenv("OPENROUTER_MAX_TOKENS", "1000"))
     OPENROUTER_TEMPERATURE = float(os.getenv("OPENROUTER_TEMPERATURE", "0.7"))
+    # Limite totale (caractères) prompt système + message user — évite le HTTP 400 « context length »
+    OPENROUTER_MAX_TOTAL_PROMPT_CHARS = int(os.getenv("OPENROUTER_MAX_TOTAL_PROMPT_CHARS", "85000"))
+    # Budget tokens approximatif réservé à l'entrée (reste = marge pour max_tokens de sortie)
+    OPENROUTER_INPUT_TOKEN_BUDGET = int(os.getenv("OPENROUTER_INPUT_TOKEN_BUDGET", "12000"))
+
+    # Chat : taille du contexte Code du travail envoyé au LLM
+    CHAT_MAX_ARTICLES = int(os.getenv("CHAT_MAX_ARTICLES", "8"))
+    CHAT_MAX_CHARS_PER_ARTICLE = int(os.getenv("CHAT_MAX_CHARS_PER_ARTICLE", "4500"))
     
     # Base de données (optionnel)
     DB_HOST = os.getenv("DB_HOST", "localhost")

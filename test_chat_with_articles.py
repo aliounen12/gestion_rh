@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from app.tools import extract_keywords, create_system_prompt
+from app.tools import extract_keywords, create_system_prompt, prepare_articles_for_chat
 from app.db import get_all_sujets, get_articles_by_sujet
 
 # Simuler une question sur les congés
@@ -36,8 +36,8 @@ for keyword in keywords:
 # 3. Récupérer les articles
 if sujet_trouve:
     print(f"\n2. Sujet trouvé: {sujet_trouve['titre_sujet']} (ID: {sujet_trouve['id']})")
-    articles = get_articles_by_sujet(sujet_trouve['id'])
-    print(f"   ✅ {len(articles)} articles récupérés")
+    articles = prepare_articles_for_chat(get_articles_by_sujet(sujet_trouve['id']))
+    print(f"   ✅ {len(articles)} articles récupérés (triés pour le chat)")
     
     # 4. Créer le prompt système
     system_prompt = create_system_prompt("", articles)

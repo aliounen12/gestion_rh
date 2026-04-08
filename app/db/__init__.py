@@ -12,6 +12,7 @@ from .db_code_travail_docx import (
     search_articles,
     get_all_sujets,
     get_sujet_by_id,
+    get_sujet_grouped_by_chapitre,
     get_articles_count
 )
 
@@ -23,5 +24,6 @@ __all__ = [
     "search_articles",
     "get_all_sujets",
     "get_sujet_by_id",
+    "get_sujet_grouped_by_chapitre",
     "get_articles_count"
 ]

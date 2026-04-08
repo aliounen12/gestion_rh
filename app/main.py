@@ -14,7 +14,9 @@ from app.tools import (
     format_chat_response,
     validate_message,
     get_rh_context,
-    extract_keywords
+    extract_keywords,
+    prepare_articles_for_chat,
+    article_refs_for_chat_response,
 )
 from app.db import get_articles_count
 
@@ -47,6 +49,7 @@ class ChatResponse(BaseModel):
     """Réponse du chat"""
     response: str
     model: str
+    sources: Optional[List[Dict[str, Any]]] = None
 
 class HealthResponse(BaseModel):
     """Réponse du health check"""
@@ -72,8 +75,8 @@ def root():
 @app.get("/articles/search")
 def search_articles_endpoint(q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, le=50)):
     """
-    Recherche d'articles dans le Code du travail.
-    Exemples de requêtes: "congé", "L.148", "L148", "article 148".
+    Recherche d'articles dans le Code du travail (contenu, libellé de chapitre, numéro).
+    Exemples de requêtes: "congé", "L.148", "syndicat", "marques syndicales".
     """
     from app.db import search_articles
     results = search_articles(q, limit=limit)
@@ -93,6 +96,42 @@ def get_article_endpoint(num_article: str):
     if not article:
         raise HTTPException(status_code=404, detail="Article introuvable")
     return {k: v for k, v in article.items() if k != "contenu_norm"}
+
+
+def _article_public(article: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in article.items() if k != "contenu_norm"}
+
+
+@app.get("/sujets")
+def list_sujets_endpoint():
+    """Liste des titres (sujets) du Code du travail issus du DOCX."""
+    from app.db import get_all_sujets
+    return get_all_sujets()
+
+
+@app.get("/sujets/{sujet_id}/chapitres")
+def sujet_chapitres_endpoint(sujet_id: int):
+    """
+    Articles d'un titre regroupés par chapitre (sous-sections), pour navigation ou affichage structuré.
+    Les articles placés avant le premier chapitre du titre sont dans `articles_sans_chapitre`.
+    """
+    from app.db import get_sujet_grouped_by_chapitre
+
+    data = get_sujet_grouped_by_chapitre(sujet_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Sujet introuvable")
+    return {
+        "sujet": data["sujet"],
+        "chapitres": [
+            {
+                **{k: v for k, v in bloc.items() if k != "articles"},
+                "articles": [_article_public(a) for a in bloc["articles"]],
+            }
+            for bloc in data["chapitres"]
+        ],
+        "articles_sans_chapitre": [_article_public(a) for a in data["articles_sans_chapitre"]],
+    }
+
 
 # Endpoint chat
 @app.post("/chat", response_model=ChatResponse)
@@ -114,90 +153,95 @@ def chat(request: ChatRequest):
         topic = keywords[0] if keywords else None
         
         # Rechercher des articles pertinents dans la source de données (fichier Code_du_travail_SN)
-        relevant_articles = []
+        relevant_articles: List[Dict[str, Any]] = []
+        seen_article_ids: set = set()
+        sujet_focus_id: Optional[int] = None
+
+        def _add_articles(articles: List[Dict[str, Any]]) -> None:
+            for article in articles:
+                aid = article.get("article_id")
+                if aid is None or aid in seen_article_ids:
+                    continue
+                seen_article_ids.add(aid)
+                relevant_articles.append(article)
+
         try:
             from app.db import search_articles, get_articles_by_sujet, get_all_sujets
-            
-            # Étape 1 : Chercher par sujet si identifié
+
+            msg_stripped = request.message.strip()
+            # Pass 0 : recherche sur la phrase (contenu + chapitre) pour les questions courtes
+            if msg_stripped and len(msg_stripped) <= 200:
+                _add_articles(search_articles(msg_stripped, limit=8))
+
             sujets = get_all_sujets()
             sujet_trouve = None
-            
-            # Chercher dans les keywords
+
+            # Étape 1 : Chercher par sujet si identifié
             for keyword in keywords:
                 for sujet in sujets:
-                    if keyword.lower() in sujet['titre_sujet'].lower() or str(sujet['id']) == keyword:
+                    if keyword.lower() in sujet["titre_sujet"].lower() or str(sujet["id"]) == keyword:
                         sujet_trouve = sujet
-                        articles = get_articles_by_sujet(sujet['id'])
-                        relevant_articles.extend(articles)
+                        sujet_focus_id = sujet["id"]
+                        _add_articles(get_articles_by_sujet(sujet["id"]))
                         break
                 if sujet_trouve:
                     break
-            
+
             # Étape 2 : Si pas de sujet trouvé, chercher dans le message directement
             if not sujet_trouve:
                 message_lower = request.message.lower()
-                # Mapping direct des mots-clés vers les sujets
                 keyword_mapping = {
                     "congé": "Congés",
                     "congés": "Congés",
-                    "conges": "Congés",  # Sans accent
+                    "conges": "Congés",
                     "transport": "Transport",
-                    "tansport": "Transport"  # Typo
+                    "tansport": "Transport",
                 }
-                
-                # Chercher les mots-clés dans le message
+
                 for keyword, sujet_nom in keyword_mapping.items():
                     if keyword in message_lower:
                         for sujet in sujets:
-                            if sujet['titre_sujet'] == sujet_nom:
+                            if sujet["titre_sujet"] == sujet_nom:
                                 sujet_trouve = sujet
-                                articles = get_articles_by_sujet(sujet['id'])
-                                relevant_articles.extend(articles)
+                                sujet_focus_id = sujet["id"]
+                                _add_articles(get_articles_by_sujet(sujet["id"]))
                                 break
                         if sujet_trouve:
                             break
-                
-                # Si toujours pas trouvé, chercher par titre de sujet
+
                 if not sujet_trouve:
                     for sujet in sujets:
-                        titre_lower = sujet['titre_sujet'].lower()
-                        # Vérifier si le titre complet est dans le message
+                        titre_lower = sujet["titre_sujet"].lower()
                         if titre_lower in message_lower:
                             sujet_trouve = sujet
-                            articles = get_articles_by_sujet(sujet['id'])
-                            relevant_articles.extend(articles)
+                            sujet_focus_id = sujet["id"]
+                            _add_articles(get_articles_by_sujet(sujet["id"]))
                             break
-                        # Vérifier si des mots du titre sont dans le message
-                        elif any(word in message_lower for word in titre_lower.split() if len(word) > 3):
+                        if any(word in message_lower for word in titre_lower.split() if len(word) > 3):
                             sujet_trouve = sujet
-                            articles = get_articles_by_sujet(sujet['id'])
-                            relevant_articles.extend(articles)
+                            sujet_focus_id = sujet["id"]
+                            _add_articles(get_articles_by_sujet(sujet["id"]))
                             break
-            
-            # Étape 3 : Recherche par mot-clé dans le contenu des articles
+
+            # Étape 3 : Recherche par mot-clé dans le contenu / chapitres
             if not relevant_articles:
-                # Extraire les mots importants du message (mots de 4+ caractères)
                 words = [w for w in request.message.lower().split() if len(w) > 4]
-                for word in words[:5]:  # Limiter à 5 mots
-                    articles = search_articles(word, limit=5)
-                    # Éviter les doublons
-                    existing_ids = {a['article_id'] for a in relevant_articles}
-                    for article in articles:
-                        if article['article_id'] not in existing_ids:
-                            relevant_articles.append(article)
+                for word in words[:5]:
+                    _add_articles(search_articles(word, limit=5))
                     if len(relevant_articles) >= 10:
                         break
-            
-            # Limiter à 10 articles maximum pour éviter un contexte trop long
-            relevant_articles = relevant_articles[:10]
+
+            chat_limit = getattr(settings, "CHAT_MAX_ARTICLES", 8)
+            relevant_articles = prepare_articles_for_chat(relevant_articles[:chat_limit])
             
         except Exception as e:
             # Si erreur, continuer sans les articles
             print(f"Erreur lors de la recherche d'articles: {e}")
             relevant_articles = []
+            sujet_focus_id = None
         
-        # Construire le contexte avec les données de la source
-        context = get_rh_context(topic)
+        # Construire le contexte avec les données de la source (titres + chapitres si sujet identifié)
+        context = get_rh_context(str(sujet_focus_id) if sujet_focus_id is not None else topic)
         
         # Créer le prompt système avec les articles (CONTENU COMPLET)
         system_prompt = create_system_prompt(context, relevant_articles)
@@ -218,12 +262,17 @@ def chat(request: ChatRequest):
                 temperature=request.temperature
             )
         except ValueError as e:
-            # Erreur spécifique d'OpenRouter (401, timeout, etc.)
+            # Erreur spécifique d'OpenRouter (401, 400 contexte / modèle, timeout, etc.)
             error_msg = str(e)
             if "401" in error_msg or "authentification" in error_msg.lower():
                 raise HTTPException(
                     status_code=401,
                     detail="Erreur d'authentification OpenRouter. Vérifiez que votre clé API est valide dans Vercel Dashboard."
+                )
+            if "400" in error_msg or "requête refusée par openrouter (400)" in error_msg.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail=error_msg,
                 )
             elif "timeout" in error_msg.lower():
                 raise HTTPException(
@@ -243,8 +292,12 @@ def chat(request: ChatRequest):
         
         # Formater la réponse
         model_used = request.model or settings.OPENROUTER_MODEL
-        formatted = format_chat_response(response, model_used)
-        
+        formatted = format_chat_response(
+            response,
+            model_used,
+            sources=article_refs_for_chat_response(relevant_articles) if relevant_articles else None,
+        )
+
         return ChatResponse(**formatted)
         
     except HTTPException:

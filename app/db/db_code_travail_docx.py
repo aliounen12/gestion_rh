@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import re
 import unicodedata
 import zipfile
@@ -41,6 +41,12 @@ _RE_ART = re.compile(
 
 _RE_QUERY_ART_NUM = re.compile(
     r"(?:(?:\bart(?:icle)?\.?\b)\s*)?(?:\bl\.?\s*)?(\d+(?:-\d+)?)\b",
+    re.IGNORECASE,
+)
+
+# Ex. "Chapitre 1 - De l'objet des syndicats professionnels"
+_RE_CHAPITRE_HEAD = re.compile(
+    r"^\s*Chapitre\s+(\d+)\s*(?:-\s*(.+))?\s*$",
     re.IGNORECASE,
 )
 
@@ -172,6 +178,8 @@ def _build_store_from_paragraphs(paragraphs: List[str]) -> _Store:
     current_article_num: Optional[str] = None  # ex: "L.1"
     current_article_buf: List[str] = []
     current_article_sujet_id = current_sujet_id
+    current_chapitre: Optional[str] = None
+    current_chapitre_num: Optional[int] = None
 
     def flush_article():
         nonlocal current_article_num, current_article_buf, current_article_sujet_id
@@ -185,6 +193,8 @@ def _build_store_from_paragraphs(paragraphs: List[str]) -> _Store:
                 "id_sujet": current_article_sujet_id,
                 "num_article": current_article_num,
                 "source": "Code_du_travail_SN",
+                "chapitre": current_chapitre,
+                "chapitre_num": current_chapitre_num,
                 "contenu": contenu,
                 # champ interne (utilisé pour la recherche tolérante aux accents)
                 "contenu_norm": _normalize_text(contenu),
@@ -202,6 +212,9 @@ def _build_store_from_paragraphs(paragraphs: List[str]) -> _Store:
             # Éviter de prendre le sommaire (table des matières) comme un sujet
             if lib.count(".") > 20 or "sommaire" in _normalize_text(lib):
                 continue
+            flush_article()
+            current_chapitre = None
+            current_chapitre_num = None
             titre = f"Titre {num} - {lib}"
             key = titre.lower()
             if key not in sujet_title_to_id:
@@ -211,6 +224,17 @@ def _build_store_from_paragraphs(paragraphs: List[str]) -> _Store:
                 sujet_title_to_id[key] = new_id
             current_sujet_id = sujet_title_to_id[key]
             current_sujet_title = titre
+            continue
+
+        mch = _RE_CHAPITRE_HEAD.match(para)
+        if mch:
+            flush_article()
+            cn = int(mch.group(1))
+            lib = (mch.group(2) or "").strip()
+            current_chapitre_num = cn
+            current_chapitre = (
+                f"Chapitre {cn}" + (f" - {lib}" if lib else "")
+            ).strip()
             continue
 
         # Détecter un article
@@ -281,13 +305,46 @@ def get_articles_by_sujet(id_sujet: int) -> List[Dict]:
     return list(_get_store().articles_by_sujet.get(id_sujet, []))
 
 
+def get_sujet_grouped_by_chapitre(sujet_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Articles d'un titre (sujet) regroupés par chapitre, pour une API / UI hiérarchique.
+    Retourne None si le sujet n'existe pas.
+    """
+    store = _get_store()
+    sujet = store.sujet_by_id.get(sujet_id)
+    if not sujet:
+        return None
+    articles = list(store.articles_by_sujet.get(sujet_id, []))
+    sans_chapitre: List[Dict] = []
+    buckets: Dict[int, Dict[str, Any]] = {}
+    for a in articles:
+        cn = a.get("chapitre_num")
+        ch = a.get("chapitre")
+        if cn is None or not ch:
+            sans_chapitre.append(a)
+            continue
+        if cn not in buckets:
+            buckets[cn] = {
+                "chapitre_num": cn,
+                "chapitre": ch,
+                "articles": [],
+            }
+        buckets[cn]["articles"].append(a)
+    chapitres = sorted(buckets.values(), key=lambda x: x["chapitre_num"])
+    return {
+        "sujet": sujet,
+        "chapitres": chapitres,
+        "articles_sans_chapitre": sans_chapitre,
+    }
+
+
 def get_article_by_id(article_id: int) -> Optional[Dict]:
     return _get_store().article_by_id.get(article_id)
 
 
 def search_articles(keyword: str, limit: int = 10) -> List[Dict]:
     """
-    Recherche simple (in-memory) par mot-clé dans `contenu` et `num_article`.
+    Recherche simple (in-memory) par mot-clé dans `contenu`, `chapitre` et `num_article`.
     Supporte aussi les requêtes type "L.148" ou "art l.148".
     """
     if not keyword:
@@ -305,7 +362,12 @@ def search_articles(keyword: str, limit: int = 10) -> List[Dict]:
 
     results: List[Dict] = []
     for a in store.articles:
-        if q_norm in a.get("contenu_norm", "") or q_norm in _normalize_text(a["num_article"]):
+        chap_n = _normalize_text(a.get("chapitre") or "")
+        if (
+            q_norm in a.get("contenu_norm", "")
+            or q_norm in _normalize_text(a["num_article"])
+            or (chap_n and q_norm in chap_n)
+        ):
             results.append(a)
             if len(results) >= limit:
                 break
