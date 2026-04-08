@@ -347,7 +347,7 @@ def health_check():
     except Exception as e:
         return HealthResponse(
             status="ok",
-            message=f"API ChatRH opérationnelle - Erreur base de données: {str(e)}"
+            message=f"API ChatRH opérationnelle - Erreur source DOCX: {str(e)}"
         )
 
 # Endpoint de diagnostic

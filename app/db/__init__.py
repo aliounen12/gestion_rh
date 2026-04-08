@@ -1,7 +1,5 @@
 """
-Module DB - Accès aux données du Code du travail
-
-Par défaut, l'application utilise le fichier DOCX `Code_du_travail_SN` comme source.
+Accès aux données du Code du travail — source unique : fichier DOCX indexé en mémoire.
 """
 
 from .db_code_travail_docx import (

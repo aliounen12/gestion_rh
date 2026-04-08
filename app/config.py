@@ -35,15 +35,8 @@ class Settings:
     # Chat : taille du contexte Code du travail envoyé au LLM
     CHAT_MAX_ARTICLES = int(os.getenv("CHAT_MAX_ARTICLES", "8"))
     CHAT_MAX_CHARS_PER_ARTICLE = int(os.getenv("CHAT_MAX_CHARS_PER_ARTICLE", "4500"))
-    
-    # Base de données (optionnel)
-    DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = os.getenv("DB_PORT", "5432")
-    DB_NAME = os.getenv("DB_NAME", "chatrh_db")
-    DB_USER = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
-    # Source de données (fichier) - Code du travail DOCX
+    # Source de données : uniquement le Code du travail au format DOCX
     # Par défaut: fichier `Code_du_travail_SN` à la racine du projet
     CODE_TRAVAIL_PATH = os.getenv("CODE_TRAVAIL_PATH", "")
 

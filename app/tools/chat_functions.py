@@ -65,7 +65,7 @@ la gestion des primes, et la conformité légale.
 Réponds TOUJOURS en français de manière claire et professionnelle.
     
 IMPORTANT : Tu dois te baser UNIQUEMENT sur les articles du Code du travail fournis ci-dessous.
-Si un article n'est pas fourni, indique que tu n'as pas cette information dans ta base de données.
+Si un article n'est pas fourni, indique que tu n'as pas cette information dans le texte du Code du travail fourni.
 Ne donne JAMAIS d'informations générales qui ne sont pas basées sur les articles fournis."""
     
     if not articles:

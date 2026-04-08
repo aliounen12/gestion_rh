@@ -7,13 +7,13 @@ from typing import Dict, List, Optional
 
 def get_rh_context(topic: Optional[str] = None) -> str:
     """
-    Retourne le contexte RH selon le sujet depuis PostgreSQL
+    Retourne le contexte RH à partir des titres / chapitres indexés depuis le DOCX.
     
     Args:
         topic: Le sujet de la question (peut être un ID de sujet ou un mot-clé)
     
     Returns:
-        Le contexte RH formaté avec les données de la base
+        Le contexte RH formaté à partir du Code du travail (fichier)
     """
     try:
         from app.db import (
@@ -27,7 +27,7 @@ def get_rh_context(topic: Optional[str] = None) -> str:
         sujets = get_all_sujets()
         
         if not sujets:
-            # Fallback si PostgreSQL n'est pas disponible
+            # Fallback si le DOCX n'est pas chargé ou vide
             return """
 Domaines d'expertise:
 - Gestion des primes et avantages
@@ -38,8 +38,8 @@ Domaines d'expertise:
 - Formation et développement
 """
         
-        # Construire le contexte avec les sujets de la base
-        context = "Domaines d'expertise disponibles dans la base de données:\n"
+        # Construire le contexte avec les titres issus du DOCX
+        context = "Titres du Code du travail (source fichier DOCX) :\n"
         for sujet in sujets:
             context += f"- {sujet['titre_sujet']}: {sujet['description']}\n"
         
@@ -121,7 +121,7 @@ def format_rh_advice(advice: str, category: Optional[str] = None) -> Dict[str, s
 
 def extract_keywords(message: str) -> List[str]:
     """
-    Extrait les mots-clés d'un message pour identifier le sujet depuis PostgreSQL
+    Extrait les mots-clés d'un message pour rapprocher un titre du Code du travail (DOCX)
     
     Args:
         message: Le message à analyser
@@ -132,7 +132,7 @@ def extract_keywords(message: str) -> List[str]:
     keywords = []
     message_lower = message.lower()
     
-    # Mapping des mots-clés vers les titres de sujets (utilisé même si PostgreSQL n'est pas disponible)
+    # Mapping des mots-clés vers des libellés de sujets (alignés sur le DOCX quand possible)
     keyword_to_sujet = {
         "congé": "Congés",
         "congés": "Congés", 
@@ -153,7 +153,6 @@ def extract_keywords(message: str) -> List[str]:
         
         if keyword in message_lower or keyword_normalized in message_normalized:
             keywords.append(sujet_titre)
-            # Si PostgreSQL est disponible, récupérer l'ID
             try:
                 from app.db import get_all_sujets
                 sujets = get_all_sujets()
@@ -165,12 +164,11 @@ def extract_keywords(message: str) -> List[str]:
                 pass
             break  # Un seul sujet à la fois
     
-    # Si pas de mot-clé trouvé, chercher dans PostgreSQL
+    # Sinon : rapprocher le message des titres extraits du DOCX
     if not keywords:
         try:
             from app.db import get_all_sujets
-            
-            # Récupérer les sujets depuis la base de données
+
             sujets = get_all_sujets()
             
             # Chercher les correspondances avec les titres de sujets

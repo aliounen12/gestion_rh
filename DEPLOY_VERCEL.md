@@ -1,21 +1,18 @@
 # 🚀 Guide de déploiement sur Vercel
 
-> **✅ Configuration déjà faite** : Ce guide suppose que votre base de données PostgreSQL et les variables d'environnement sont **déjà configurées sur Vercel**.
+L’application **n’utilise pas de base SQL** : le Code du travail est lu depuis un **fichier `.docx`** présent dans le dépôt (ou dont le chemin est donné par `CODE_TRAVAIL_PATH`).
 
 ## 📋 Prérequis
 
-- ✅ Compte Vercel configuré
-- ✅ Base de données PostgreSQL configurée (Supabase/Neon)
-- ✅ Variables d'environnement configurées dans Vercel Dashboard :
-  - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-  - `OPENROUTER_API_KEY`
+- Compte Vercel configuré
+- Variables d’environnement sur Vercel :
+  - **`OPENROUTER_API_KEY`** (obligatoire pour `/chat`)
   - (Optionnel) `OPENROUTER_MODEL`, `OPENROUTER_MAX_TOKENS`, `OPENROUTER_TEMPERATURE`
+  - (Optionnel) **`CODE_TRAVAIL_PATH`** : chemin relatif au projet vers le `.docx` (ex. `Code_sn.docx`). Si vide, l’app essaie les noms par défaut à la racine.
 
 ## 📦 Étape 1 : Préparer le projet pour Vercel
 
 ### 1. Vérifier `vercel.json`
-
-Le fichier `vercel.json` doit être présent à la racine avec cette configuration :
 
 ```json
 {
@@ -29,152 +26,76 @@ Le fichier `vercel.json` doit être présent à la racine avec cette configurati
 }
 ```
 
-> **Pourquoi `builds` ?** Sans cette section, seules des `routes` / `rewrites` vers `api/index.py` donnent souvent une **404** sur tout le site : la fonction Python n’est pas reliée comme avec le builder `@vercel/python`. On garde donc `builds` + `routes` pour que `/`, `/health`, `/chat`, etc. fonctionnent. Effet de bord : les réglages « Build & Development » du dashboard Vercel sont ignorés ([doc](https://vercel.link/unused-build-settings)) — c’est normal. Ne pas ajouter `functions.api/**/*.py` : le build échoue ([motif sans correspondance](https://vercel.link/unmatched-function-pattern)). Utiliser `.vercelignore` pour limiter le bundle.
+> **Pourquoi `builds` ?** Sans cette section, des `routes` / `rewrites` seules vers `api/index.py` donnent souvent une **404**. Ne pas ajouter `functions.api/**/*.py` : le build peut échouer ([motif sans correspondance](https://vercel.link/unmatched-function-pattern)). Utiliser `.vercelignore` pour limiter le bundle.
 
-### 2. Vérifier le handler Vercel
+### 2. Handler `api/index.py`
 
-Le fichier `api/index.py` doit être présent avec ce contenu :
+Le fichier doit importer l’app FastAPI depuis `app.main` et exposer `app` (ASGI).
 
-```python
-#!/usr/bin/env python3
-"""
-Handler Vercel pour ChatRH API
-Vercel supporte nativement les applications ASGI (FastAPI/Starlette)
-"""
+### 3. `requirements.txt`
 
-import sys
-import os
+Sans `psycopg2` : par ex. `fastapi`, `pydantic`, `python-dotenv`, `requests`, etc. (voir le fichier à la racine du repo).
 
-# Ajouter le répertoire parent au path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+### 4. Fichier Word
 
-from app.main import app
-
-# Vercel supporte nativement ASGI, on exporte directement l'app FastAPI
-# Pas besoin de Mangum pour Vercel
-```
-
-**Important** : Vercel supporte nativement ASGI, donc **pas besoin de Mangum** !
-
-### 3. Vérifier `requirements.txt`
-
-Le fichier `requirements.txt` doit contenir ces dépendances :
-
-```
-fastapi==0.104.1
-pydantic>=2.12.0
-python-dotenv==1.0.0
-requests==2.31.0
-psycopg2-binary==2.9.9
-```
+Le `.docx` du Code du travail doit être **versionné** (ou fourni autrement) pour être inclus dans le déploiement. Vercel ne monte pas de disque persistant : pas de DOCX uniquement sur ta machine.
 
 ## 🚀 Étape 2 : Déployer
 
-### Méthode 1 : Via GitHub (Recommandé)
+### Via GitHub
 
-1. Poussez votre code sur GitHub
-2. Connectez votre repo à Vercel (si pas déjà fait)
-3. Vercel détectera automatiquement le projet Python
-4. Le déploiement se fera automatiquement avec les variables d'environnement déjà configurées
+1. Push du code sur GitHub  
+2. Projet lié à Vercel  
+3. Définir les variables d’environnement dans **Settings → Environment Variables**  
+4. Déploiement automatique
 
-### Méthode 2 : Via Vercel CLI
+### Via CLI
 
 ```bash
-# Installer Vercel CLI
 npm i -g vercel
-
-# Se connecter
 vercel login
-
-# Déployer
 vercel
-
-# Pour la production
 vercel --prod
 ```
 
-## 📝 Structure finale
+## 📝 Structure utile
 
 ```
 gestion_rh/
-├── api/
-│   └── index.py          # Handler Vercel
-├── app/                   # Votre application
-├── vercel.json           # Configuration Vercel
-├── requirements.txt      # Dépendances
-└── .vercelignore        # Fichiers à ignorer
+├── api/index.py
+├── app/
+├── vercel.json
+├── requirements.txt
+├── .vercelignore
+└── Code_sn.docx   (ou autre, selon CODE_TRAVAIL_PATH)
 ```
 
-## ⚠️ Notes importantes
+## ⚠️ Notes
 
-1. **Timeout** : Vercel Functions ont un timeout de 10s (gratuit) ou 60s (pro)
-2. **Cold start** : Le premier appel peut être lent
-3. **Base de données** : Doit être accessible depuis Internet
-4. **Variables d'environnement** : Configurez-les dans Vercel Dashboard
-
-## 📄 Note sur la base de données
-
-> **✅ Configuration déjà faite** : Votre base de données PostgreSQL est déjà configurée et chargée sur Vercel. L'application utilisera automatiquement les variables d'environnement configurées dans Vercel Dashboard pour se connecter à votre base existante.
-
-L'application se connecte automatiquement via :
-- `DB_HOST` : Host de votre base (Supabase/Neon)
-- `DB_PORT` : Port (généralement 5432)
-- `DB_NAME` : Nom de la base (généralement `postgres`)
-- `DB_USER` : Utilisateur PostgreSQL
-- `DB_PASSWORD` : Mot de passe PostgreSQL
-
-Ces variables sont déjà configurées dans **Vercel Dashboard > Settings > Environment Variables**.
+1. **Timeout** : fonctions Vercel 10 s (gratuit) ou 60 s (pro)  
+2. **Cold start** possible au premier appel  
+3. **Taille du bundle** : le DOCX compte dans la limite de la fonction  
 
 ## 🔍 Vérification
 
-Une fois déployé, testez :
-
-1. **Endpoint racine** : `https://votre-projet.vercel.app/`
-   - Affiche les informations de l'API
-
-2. **Health check** : `https://votre-projet.vercel.app/health`
-   - Vérifie l'état de l'API et de la base de données
-   - Affiche si OpenRouter est configuré
-
-3. **Diagnostic** : `https://votre-projet.vercel.app/diagnostic`
-   - Affiche la configuration complète (sans exposer les mots de passe)
-   - Vérifie les variables d'environnement
-   - Utile pour déboguer les problèmes de configuration
-
-4. **Endpoint chat** : `https://votre-projet.vercel.app/chat`
-   - Testez avec une requête POST
+- Racine : `https://votre-projet.vercel.app/`  
+- Santé : `https://votre-projet.vercel.app/health` (articles chargés depuis le DOCX)  
+- Diagnostic : `https://votre-projet.vercel.app/diagnostic`  
+- Chat : `POST https://votre-projet.vercel.app/chat`  
 
 ## 🆘 Dépannage
 
-### Erreur : "Impossible de contacter l'assistant"
+### Chat / OpenRouter
 
-1. **Vérifiez la configuration** :
-   - Allez sur `https://votre-projet.vercel.app/diagnostic`
-   - Vérifiez que `openrouter.api_key_configured` est `true`
-   - Vérifiez que `database.connected` est `true`
+- Vérifier `OPENROUTER_API_KEY` dans Vercel et le diagnostic (`openrouter.api_key_configured`).  
+- Vérifier `OPENROUTER_MODEL` (format `fournisseur/modele`, ex. `openai/gpt-4o-mini`).
 
-2. **Vérifiez les variables d'environnement dans Vercel** :
-   - Allez dans Vercel Dashboard > Settings > Environment Variables
-   - Vérifiez que `OPENROUTER_API_KEY` est configurée
-   - Vérifiez que toutes les variables `DB_*` sont configurées
+### Aucun article / erreur DOCX
 
-3. **Vérifiez les logs Vercel** :
-   - Allez dans Vercel Dashboard > Deployments > Votre déploiement > Functions
-   - Regardez les logs pour voir l'erreur exacte
+- Vérifier que le fichier est bien dans le repo déployé.  
+- Définir `CODE_TRAVAIL_PATH` si le fichier n’est pas un des noms par défaut.  
+- Consulter `diagnostic` → `data_source`.
 
-### Erreur : "psycopg2-binary not available"
-- Vérifiez que `psycopg2-binary==2.9.9` est dans `requirements.txt`
+### Timeout
 
-### Erreur : "Connection timeout"
-- Vérifiez que votre base de données est accessible depuis Internet
-- Vérifiez les paramètres de firewall de votre base de données
-
-### Erreur : "Function timeout"
-- Les fonctions Vercel ont un timeout de 10s (gratuit) ou 60s (pro)
-- Le timeout OpenRouter est configuré à 8s pour éviter les timeouts Vercel
-- Si le problème persiste, considérez passer au plan Pro
-
-### Erreur : "Erreur d'authentification (401)"
-- Vérifiez que votre clé API OpenRouter est valide
-- Allez sur https://openrouter.ai/keys pour vérifier vos clés
-- Assurez-vous que la clé est bien configurée dans Vercel Dashboard
+- OpenRouter est limité à 8 s côté client pour limiter les timeouts Vercel.

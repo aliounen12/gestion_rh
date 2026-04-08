@@ -158,7 +158,7 @@ curl "http://localhost:8000/articles/L.148"
 Lorsque vous posez une question :
 
 1. **Extraction des mots-clés** : Le système identifie les sujets pertinents (ex: "congés", "transport")
-2. **Recherche PostgreSQL** : Les articles du Code du travail correspondants sont récupérés
+2. **Recherche dans le DOCX** : Les articles indexés depuis le fichier Word correspondants sont récupérés
 3. **Enrichissement du contexte** : Les articles trouvés sont ajoutés au contexte
 4. **Appel OpenRouter** : La question + le contexte sont envoyés à l'IA
 5. **Réponse enrichie** : L'IA répond en s'appuyant sur les articles du Code du travail

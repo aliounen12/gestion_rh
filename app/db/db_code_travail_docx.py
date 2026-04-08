@@ -2,8 +2,9 @@
 """
 Source de données "fichier" pour ChatRH.
 
-Au lieu d'une base PostgreSQL, on extrait et indexe le Code du travail depuis
-le fichier DOCX `Code_du_travail_SN` (présent à la racine du projet).
+Source de données unique : extraction et index du Code du travail depuis un
+fichier DOCX (`Code_du_travail_SN`, `Code_sn.docx`, etc. à la racine du projet
+ou chemin défini par CODE_TRAVAIL_PATH).
 """
 
 from __future__ import annotations
@@ -286,7 +287,7 @@ def _get_store() -> _Store:
     return _build_store_from_paragraphs(paragraphs)
 
 
-# --- API publique (même surface que db_postgres.py) ---
+# --- API publique (accès articles / sujets pour FastAPI et le chat) ---
 
 def get_db_connection():
     """Compat: plus de DB en mode fichier."""

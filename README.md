@@ -19,7 +19,7 @@ chatrh/
 │   ├── llm/
 │   │   └── openrouter_client.py  # Client OpenRouter
 │   ├── models/               # Schémas Pydantic (si nécessaire)
-│   ├── db/                   # Gestion base de données (optionnel)
+│   ├── db/                   # Lecture / index du Code du travail (DOCX)
 │   ├── tools/                # Outils utilitaires (optionnel)
 │   ├── config.py             # Configuration
 │   └── main.py               # Application FastAPI
