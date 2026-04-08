@@ -19,15 +19,17 @@ Le fichier `vercel.json` doit être présent à la racine avec cette configurati
 
 ```json
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
+    { "src": "api/index.py", "use": "@vercel/python" }
+  ],
   "routes": [
-    { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "api/index.py" }
   ]
 }
 ```
 
-> **Note** : l’ancienne clé `builds` + `@vercel/python` est dépréciée. Ne pas utiliser `functions.api/**/*.py` sur les déploiements Python récents : ce motif ne correspond à aucune fonction et fait échouer le build ([unmatched pattern](https://vercel.link/unmatched-function-pattern)). Utilisez `.vercelignore` pour limiter la taille du bundle.
+> **Pourquoi `builds` ?** Sans cette section, seules des `routes` / `rewrites` vers `api/index.py` donnent souvent une **404** sur tout le site : la fonction Python n’est pas reliée comme avec le builder `@vercel/python`. On garde donc `builds` + `routes` pour que `/`, `/health`, `/chat`, etc. fonctionnent. Effet de bord : les réglages « Build & Development » du dashboard Vercel sont ignorés ([doc](https://vercel.link/unused-build-settings)) — c’est normal. Ne pas ajouter `functions.api/**/*.py` : le build échoue ([motif sans correspondance](https://vercel.link/unmatched-function-pattern)). Utiliser `.vercelignore` pour limiter le bundle.
 
 ### 2. Vérifier le handler Vercel
 
