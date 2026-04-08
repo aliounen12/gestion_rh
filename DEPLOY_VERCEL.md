@@ -19,24 +19,20 @@ Le fichier `vercel.json` doit être présent à la racine avec cette configurati
 
 ```json
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    }
-  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/index.py"
-    }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "api/index.py" }
   ],
-  "env": {
-    "PYTHON_VERSION": "3.11"
+  "functions": {
+    "api/**/*.py": {
+      "excludeFiles": "{**/__pycache__/**,**/*.pyc,.git/**,**/test_*.py,**/tests/**}"
+    }
   }
 }
 ```
+
+> **Note** : l’ancienne clé `builds` + `@vercel/python` est dépréciée et faisait ignorer les réglages « Build & Development » du dashboard Vercel. La détection du runtime Python se fait via `api/index.py` et `requirements.txt`.
 
 ### 2. Vérifier le handler Vercel
 

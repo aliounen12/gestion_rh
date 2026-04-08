@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from app.config import settings
-from app.llm import openrouter_client
+from app.llm import openrouter_client, resolve_openrouter_model
 from app.tools import (
     create_system_prompt,
     format_chat_response,
@@ -253,12 +253,15 @@ def chat(request: ChatRequest):
                 detail="OPENROUTER_API_KEY n'est pas configurée. Veuillez configurer cette variable d'environnement dans Vercel Dashboard."
             )
         
+        # Modèle effectif (ignore les placeholders type « string » venant du client ou du .env)
+        resolved_model = resolve_openrouter_model(request.model, settings.OPENROUTER_MODEL)
+
         # Appeler l'API OpenRouter
         try:
             response = openrouter_client.chat_completion(
                 prompt=request.message,
                 system_prompt=system_prompt,
-                model=request.model,
+                model=resolved_model,
                 temperature=request.temperature
             )
         except ValueError as e:
@@ -291,7 +294,7 @@ def chat(request: ChatRequest):
             )
         
         # Formater la réponse
-        model_used = request.model or settings.OPENROUTER_MODEL
+        model_used = resolved_model
         formatted = format_chat_response(
             response,
             model_used,
@@ -358,8 +361,9 @@ def diagnostic():
         "openrouter": {
             "api_key_configured": bool(settings.OPENROUTER_API_KEY),
             "api_key_length": len(settings.OPENROUTER_API_KEY) if settings.OPENROUTER_API_KEY else 0,
-            "model": settings.OPENROUTER_MODEL,
-            "api_url": settings.OPENROUTER_API_URL
+            "model_env_raw": settings.OPENROUTER_MODEL,
+            "model_effective": resolve_openrouter_model(None, settings.OPENROUTER_MODEL),
+            "api_url": settings.OPENROUTER_API_URL,
         },
         "data_source": {
             "type": "docx_file",

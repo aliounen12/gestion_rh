@@ -20,7 +20,11 @@ class Settings:
     # Configuration OpenRouter (optionnel)
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_API_URL = os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
-    OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
+    # Identifiant OpenRouter au format fournisseur/nom, ex. openai/gpt-4o-mini
+    OPENROUTER_MODEL = (os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini") or "").strip()
+    OPENROUTER_MODEL_FALLBACK = (
+        os.getenv("OPENROUTER_MODEL_FALLBACK", "openai/gpt-4o-mini") or ""
+    ).strip()
     OPENROUTER_MAX_TOKENS = int(os.getenv("OPENROUTER_MAX_TOKENS", "1000"))
     OPENROUTER_TEMPERATURE = float(os.getenv("OPENROUTER_TEMPERATURE", "0.7"))
     # Limite totale (caractères) prompt système + message user — évite le HTTP 400 « context length »

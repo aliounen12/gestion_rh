@@ -9,6 +9,56 @@ from typing import Optional, Tuple
 from app.config import settings
 
 
+# Valeurs typiques envoyées par erreur (Swagger « string », .env placeholder, etc.)
+_INVALID_MODEL_PLACEHOLDERS = frozenset(
+    {
+        "",
+        "string",
+        "null",
+        "none",
+        "undefined",
+        "model",
+        "default",
+        "optional",
+        "your-model-here",
+    }
+)
+
+
+def _is_valid_openrouter_model_id(model_id: str) -> bool:
+    if not model_id or not isinstance(model_id, str):
+        return False
+    m = model_id.strip()
+    if not m:
+        return False
+    if m.lower() in _INVALID_MODEL_PLACEHOLDERS:
+        return False
+    # OpenRouter attend un slug du type fournisseur/modèle
+    if "/" not in m:
+        return False
+    return True
+
+
+def resolve_openrouter_model(requested: Optional[str], configured_default: str) -> str:
+    """
+    Choisit un modèle utilisable pour l'API OpenRouter.
+    Ignore les placeholders (ex. \"string\") et les IDs sans « / ».
+    """
+    fallback = getattr(
+        settings, "OPENROUTER_MODEL_FALLBACK", "openai/gpt-4o-mini"
+    )
+    req = (requested or "").strip() if requested else ""
+    cfg = (configured_default or "").strip() if configured_default else ""
+
+    if _is_valid_openrouter_model_id(req):
+        return req
+    if _is_valid_openrouter_model_id(cfg):
+        return cfg
+    if _is_valid_openrouter_model_id(fallback):
+        return fallback.strip()
+    return "openai/gpt-4o-mini"
+
+
 def _approx_tokens(text: str) -> int:
     return max(0, len(text) // 4)
 
@@ -65,7 +115,9 @@ class OpenRouterClient:
     def __init__(self):
         self.api_key = settings.OPENROUTER_API_KEY
         self.api_url = settings.OPENROUTER_API_URL
-        self.default_model = settings.OPENROUTER_MODEL
+        self.default_model = resolve_openrouter_model(
+            None, settings.OPENROUTER_MODEL
+        )
         self.max_tokens = settings.OPENROUTER_MAX_TOKENS
         self.temperature = settings.OPENROUTER_TEMPERATURE
     
@@ -104,8 +156,10 @@ class OpenRouterClient:
         safe_max_out = max(256, input_budget - input_approx - 256)
         max_tokens = min(self.max_tokens, safe_max_out)
 
+        model_id = resolve_openrouter_model(model, self.default_model)
+
         payload = {
-            "model": (model or self.default_model).strip() or self.default_model,
+            "model": model_id,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature if temperature is not None else self.temperature
