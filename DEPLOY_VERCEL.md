@@ -23,16 +23,11 @@ Le fichier `vercel.json` doit être présent à la racine avec cette configurati
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "api/index.py" }
-  ],
-  "functions": {
-    "api/**/*.py": {
-      "excludeFiles": "{**/__pycache__/**,**/*.pyc,.git/**,**/test_*.py,**/tests/**}"
-    }
-  }
+  ]
 }
 ```
 
-> **Note** : l’ancienne clé `builds` + `@vercel/python` est dépréciée et faisait ignorer les réglages « Build & Development » du dashboard Vercel. La détection du runtime Python se fait via `api/index.py` et `requirements.txt`.
+> **Note** : l’ancienne clé `builds` + `@vercel/python` est dépréciée. Ne pas utiliser `functions.api/**/*.py` sur les déploiements Python récents : ce motif ne correspond à aucune fonction et fait échouer le build ([unmatched pattern](https://vercel.link/unmatched-function-pattern)). Utilisez `.vercelignore` pour limiter la taille du bundle.
 
 ### 2. Vérifier le handler Vercel
 
